@@ -37,35 +37,53 @@ This project focuses on real-world observability concepts such as metrics collec
 ## Architecture Flow
 
 ```text
-User / Admin
-     |
-     v
-Grafana Dashboard
-     |
-     |---------------- Metrics Visualization ----------------|
-     |                                                       |
-     v                                                       v
-Prometheus <---------------- Node Exporter <---------- App Server 1
-     |                                                       |
-     |                                                       v
-     |                                                App Server 2
-     |
-     |---------------- Logs Visualization -------------------|
-     |
-     v
-Loki <---------------------- Promtail <--------------- App Server 1
-     |                                                       |
-     |                                                       v
-     |                                                App Server 2
+Users / Application Traffic
+        |
+        v
+Application Servers / Worker Nodes / Kubernetes / Lambda
+        |
+        |---------------- Metrics ----------------|
+        |                                         |
+        v                                         v
+Node Exporter / App Metrics                CloudWatch Metrics
+        |                                         |
+        v                                         v
+Prometheus ---------------------------> Grafana Dashboards
+        |
+        v
+Alertmanager
+        |
+        v
+Email / Slack / Notification
+```
 
+```text
+Application Logs / System Logs / Nginx Logs
+        |
+        v
+     Promtail 
+        |
+        v
+       Loki
+        |
+        v
+Grafana Log Dashboards
+```
 
-AWS CloudWatch
-     ^
-     |
-CloudWatch Agent
-     ^
-     |
-App Server 1 and App Server 2
+```text
+CloudWatch Alarm / Synthetics Canary
+        |
+        v
+   EventBridge
+        |
+        v
+Lambda Auto-Remediation
+        |
+        v
+AWS Systems Manager
+        |
+        v
+Restart unhealthy service on EC2
 ```
 
 ---
