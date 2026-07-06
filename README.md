@@ -91,46 +91,72 @@ Restart unhealthy service on EC2
 ## Architecture Diagram using Mermaid
 
 ```mermaid
-flowchart TD
-    Admin[Admin / DevOps Engineer] --> Grafana[Grafana Dashboard]
+flowchart LR
 
-    subgraph MonitoringServer[Monitoring Server - EC2]
-        Prometheus[Prometheus]
-        Grafana[Grafana]
-        Loki[Loki]
+    %% =========================
+    %% USERS
+    %% =========================
+    Admin["DevOps Engineer / Admin"]
+
+    %% =========================
+    %% APPLICATION SERVERS
+    %% =========================
+    subgraph Apps["Application Servers"]
+        App1["App Server 1<br/>NGINX Application"]
+        App2["App Server 2<br/>NGINX Application"]
     end
 
-    subgraph AppServer1[Application Server 1 - EC2]
-        Nginx1[NGINX Application]
-        NodeExporter1[Node Exporter]
-        Promtail1[Promtail]
-        CWAgent1[CloudWatch Agent]
-        Logs1[/System Logs + NGINX Logs/]
+    %% =========================
+    %% AGENTS
+    %% =========================
+    subgraph Agents["Agents Running on App Servers"]
+        NodeExporter["Node Exporter<br/>Port 9100"]
+        Promtail["Promtail<br/>Log Collector"]
+        CWAgent["CloudWatch Agent<br/>Metrics + Logs"]
     end
 
-    subgraph AppServer2[Application Server 2 - EC2]
-        Nginx2[NGINX Application]
-        NodeExporter2[Node Exporter]
-        Promtail2[Promtail]
-        CWAgent2[CloudWatch Agent]
-        Logs2[/System Logs + NGINX Logs/]
+    %% =========================
+    %% MONITORING SERVER
+    %% =========================
+    subgraph Monitoring["Monitoring Server"]
+        Prometheus["Prometheus<br/>Metrics Database"]
+        Loki["Loki<br/>Log Aggregation"]
+        Grafana["Grafana<br/>Dashboards"]
     end
 
-    NodeExporter1 --> Prometheus
-    NodeExporter2 --> Prometheus
+    %% =========================
+    %% AWS NATIVE MONITORING
+    %% =========================
+    CloudWatch["Amazon CloudWatch<br/>Metrics + Log Groups"]
 
-    Promtail1 --> Loki
-    Promtail2 --> Loki
+    %% =========================
+    %% METRICS FLOW
+    %% =========================
+    App1 --> NodeExporter
+    App2 --> NodeExporter
+    NodeExporter -->|"Scrapes system metrics"| Prometheus
+    Prometheus -->|"Prometheus Data Source"| Grafana
 
-    Logs1 --> Promtail1
-    Logs2 --> Promtail2
+    %% =========================
+    %% LOGS FLOW
+    %% =========================
+    App1 --> Promtail
+    App2 --> Promtail
+    Promtail -->|"Pushes system + NGINX logs"| Loki
+    Loki -->|"Loki Data Source"| Grafana
 
-    CWAgent1 --> CloudWatch[AWS CloudWatch]
-    CWAgent2 --> CloudWatch
+    %% =========================
+    %% CLOUDWATCH FLOW
+    %% =========================
+    App1 --> CWAgent
+    App2 --> CWAgent
+    CWAgent -->|"Sends metrics and logs"| CloudWatch
+    CloudWatch -->|"CloudWatch Data Source"| Grafana
 
-    Prometheus --> Grafana
-    Loki --> Grafana
-    CloudWatch --> Grafana
+    %% =========================
+    %% DASHBOARD ACCESS
+    %% =========================
+    Admin -->|"View metrics, logs, dashboards"| Grafana
 ```
 
 ---
