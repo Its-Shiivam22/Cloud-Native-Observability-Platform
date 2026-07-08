@@ -1,4 +1,4 @@
-# Cloud-Native Monitoring and Observability Platform on AWS
+#  Cloud-Native Monitoring and Observability Platform on AWS
 
 ![AWS](https://img.shields.io/badge/AWS-Cloud-orange)
 ![EC2](https://img.shields.io/badge/Amazon-EC2-yellow)
@@ -8,347 +8,291 @@
 ![Promtail](https://img.shields.io/badge/Log%20Collector-Promtail-green)
 ![Node Exporter](https://img.shields.io/badge/Metrics-Node%20Exporter-lightgrey)
 ![CloudWatch](https://img.shields.io/badge/AWS-CloudWatch-purple)
+![SNS](https://img.shields.io/badge/Alerts-SNS-pink)
+![EventBridge](https://img.shields.io/badge/EventBridge-Automation-blue)
+![Lambda](https://img.shields.io/badge/Lambda-Auto--Remediation-yellow)
+![SSM](https://img.shields.io/badge/AWS-Systems%20Manager-brightgreen)
 ![Status](https://img.shields.io/badge/Status-Completed-brightgreen)
 ![License](https://img.shields.io/badge/License-MIT-blue)
 
 ---
 
-## Project Overview
+##  Project Overview
 
-This project demonstrates the implementation of a centralized **Monitoring and Observability Platform on AWS** using open-source monitoring tools and AWS-native monitoring services.
+This project demonstrates the setup of a centralized **Cloud-Native Monitoring and Observability Platform on AWS** for two EC2-based NGINX web servers.
 
-The setup contains one dedicated **Monitoring Server** and two **Application Servers**. The Monitoring Server runs Prometheus, Grafana, and Loki, while the Application Servers run Node Exporter, Promtail, NGINX, and CloudWatch Agent.
+The project uses one dedicated **Monitoring Server** and two **Web Servers**. The Monitoring Server runs Prometheus, Grafana, Loki, and Node Exporter. The Web Servers run NGINX, Node Exporter, Promtail, CloudWatch Agent, and SSM Agent.
 
-The platform collects:
+The monitoring setup collects:
 
-- Infrastructure metrics
-- CPU, memory, disk, and network usage
-- EC2 instance health
-- NGINX access and error logs
-- System logs
-- Authentication logs
-- CloudWatch custom metrics
-- Centralized logs in Grafana
+    EC2 infrastructure metrics
+    CPU, memory, disk, filesystem, and network metrics
+    NGINX access and error logs
+    Linux system logs
+    Authentication logs
+    CloudWatch custom metrics and log groups
+    NGINX website heartbeat status
 
-This project focuses on real-world observability concepts such as metrics collection, log aggregation, dashboard visualization, AWS-native monitoring, and troubleshooting visibility across multiple servers.
+The project also implements an automated recovery workflow. A **CloudWatch Synthetics Canary** continuously monitors the NGINX website endpoint. When NGINX is stopped or the website becomes unavailable, the Canary fails, a CloudWatch Alarm enters the `ALARM` state, SNS sends an email notification, EventBridge triggers a Lambda function, and Lambda uses AWS Systems Manager Run Command to restart NGINX automatically.
 
----
-
-## Architecture Flow
-
-```text
-Users / Application Traffic
-        |
-        v
-Application Servers / Worker Nodes / Kubernetes / Lambda
-        |
-        |---------------- Metrics ----------------|
-        |                                         |
-        v                                         v
-Node Exporter / App Metrics                CloudWatch Metrics
-        |                                         |
-        v                                         v
-Prometheus ---------------------------> Grafana Dashboards
-        |
-        v
-Alertmanager
-        |
-        v
-Email / Slack / Notification
-```
-
-```text
-Application Logs / System Logs / Nginx Logs
-        |
-        v
-     Promtail 
-        |
-        v
-       Loki
-        |
-        v
-Grafana Log Dashboards
-```
-
-```text
-CloudWatch Alarm / Synthetics Canary
-        |
-        v
-   EventBridge
-        |
-        v
-Lambda Auto-Remediation
-        |
-        v
-AWS Systems Manager
-        |
-        v
-Restart unhealthy service on EC2
-```
+This practical project focuses only on EC2-based web server monitoring and auto-remediation. Kubernetes cluster monitoring and serverless application monitoring were not implemented in this practical.
 
 ---
 
-## Architecture Diagram using Mermaid
+##  Architecture Flow
+
+    User / Admin
+         |
+         v
+    Grafana Dashboard
+         |
+         |---------------- Metrics Flow ----------------|
+         |                                              |
+         v                                              v
+    Prometheus <--------- Node Exporter <--------- WebServer-01
+         ^                                      WebServer-02
+         |
+         |
+    Grafana Visualizes Metrics
+
+
+    NGINX Logs / System Logs / Secure Logs
+         |
+         v
+    Promtail on Web Servers
+         |
+         v
+    Loki on Monitoring Server
+         |
+         v
+    Grafana Explore / Logs Dashboard
+
+
+    NGINX Website URL Endpoint
+         |
+         v
+    CloudWatch Synthetics Canary
+         |
+         v
+    CloudWatch Alarm
+         |
+         v
+    SNS Email Notification
+         |
+         v
+    EventBridge Rule
+         |
+         v
+    Lambda Function
+         |
+         v
+    AWS Systems Manager Run Command
+         |
+         v
+    Restart NGINX on Web Servers
+
+---
+
+##  Architecture Diagram using Mermaid
 
 ```mermaid
 flowchart LR
 
-    %% =========================
-    %% USERS
-    %% =========================
-    Admin["DevOps Engineer / Admin"]
+    Admin[DevOps Engineer / Admin]
 
-    %% =========================
-    %% APPLICATION SERVERS
-    %% =========================
-    subgraph Apps["Application Servers"]
-        App1["App Server 1<br/>NGINX Application"]
-        App2["App Server 2<br/>NGINX Application"]
+    subgraph WebServers[EC2 Web Servers]
+        Web1[WebServer-01<br/>NGINX Website]
+        Web2[WebServer-02<br/>NGINX Website]
     end
 
-    %% =========================
-    %% AGENTS
-    %% =========================
-    subgraph Agents["Agents Running on App Servers"]
-        NodeExporter["Node Exporter<br/>Port 9100"]
-        Promtail["Promtail<br/>Log Collector"]
-        CWAgent["CloudWatch Agent<br/>Metrics + Logs"]
+    subgraph WebAgents[Agents on Web Servers]
+        NodeExporter[Node Exporter<br/>Metrics]
+        Promtail[Promtail<br/>Log Collector]
+        CWAgent[CloudWatch Agent<br/>Metrics + Logs]
+        SSMAgent[SSM Agent<br/>Run Command]
     end
 
-    %% =========================
-    %% MONITORING SERVER
-    %% =========================
-    subgraph Monitoring["Monitoring Server"]
-        Prometheus["Prometheus<br/>Metrics Database"]
-        Loki["Loki<br/>Log Aggregation"]
-        Grafana["Grafana<br/>Dashboards"]
+    subgraph MonitoringServer[Monitoring Server]
+        Prometheus[Prometheus<br/>Metrics Collection]
+        Grafana[Grafana<br/>Dashboards]
+        Loki[Loki<br/>Log Aggregation]
     end
 
-    %% =========================
-    %% AWS NATIVE MONITORING
-    %% =========================
-    CloudWatch["Amazon CloudWatch<br/>Metrics + Log Groups"]
+    subgraph AWSNative[AWS Native Monitoring and Automation]
+        CloudWatch[Amazon CloudWatch<br/>Metrics + Logs]
+        Canary[CloudWatch Synthetics Canary<br/>Heartbeat Check]
+        Alarm[CloudWatch Alarm<br/>SuccessPercent < 100]
+        SNS[SNS<br/>Email Alert]
+        EventBridge[EventBridge Rule<br/>Alarm State Change]
+        Lambda[Lambda<br/>restart-unhealthy-service]
+        SSM[AWS Systems Manager<br/>Run Command]
+    end
 
-    %% =========================
-    %% METRICS FLOW
-    %% =========================
-    App1 --> NodeExporter
-    App2 --> NodeExporter
-    NodeExporter -->|"Scrapes system metrics"| Prometheus
-    Prometheus -->|"Prometheus Data Source"| Grafana
+    Admin --> Grafana
 
-    %% =========================
-    %% LOGS FLOW
-    %% =========================
-    App1 --> Promtail
-    App2 --> Promtail
-    Promtail -->|"Pushes system + NGINX logs"| Loki
-    Loki -->|"Loki Data Source"| Grafana
+    Web1 --> NodeExporter
+    Web2 --> NodeExporter
+    NodeExporter --> Prometheus
+    Prometheus --> Grafana
 
-    %% =========================
-    %% CLOUDWATCH FLOW
-    %% =========================
-    App1 --> CWAgent
-    App2 --> CWAgent
-    CWAgent -->|"Sends metrics and logs"| CloudWatch
-    CloudWatch -->|"CloudWatch Data Source"| Grafana
+    Web1 --> Promtail
+    Web2 --> Promtail
+    Promtail --> Loki
+    Loki --> Grafana
 
-    %% =========================
-    %% DASHBOARD ACCESS
-    %% =========================
-    Admin -->|"View metrics, logs, dashboards"| Grafana
+    Web1 --> CWAgent
+    Web2 --> CWAgent
+    CWAgent --> CloudWatch
+    CloudWatch --> Grafana
+
+    Web1 --> Canary
+    Web2 --> Canary
+    Canary --> Alarm
+    Alarm --> SNS
+    Alarm --> EventBridge
+    EventBridge --> Lambda
+    Lambda --> SSM
+    SSM --> SSMAgent
+    SSMAgent --> Web1
+    SSMAgent --> Web2
 ```
 
 ---
 
-## Architecture Diagram
+##  Architecture Diagram
 
-Add your architecture image here:
-
-```text
-Screenshots/1.Architecture-Diagram.png
-```
-
-```md
 ![Architecture Diagram](Screenshots/1.Architecture-Diagram.png)
-```
+
+    Screenshots/1.Architecture-Diagram.png
 
 ---
 
-## Tools and Services Used
+##  Tools and Technologies Used
 
 | Category | Tools / Services |
 |---|---|
 | Cloud Platform | AWS |
 | Compute | Amazon EC2 |
+| Web Server | NGINX |
 | Metrics Collection | Prometheus, Node Exporter |
 | Visualization | Grafana |
 | Log Aggregation | Loki |
-| Log Collection Agent | Promtail |
+| Log Collection | Promtail |
 | AWS Native Monitoring | Amazon CloudWatch |
-| AWS Agent | CloudWatch Agent |
-| Web Server | NGINX |
+| Custom Metrics and Logs | CloudWatch Agent |
+| Synthetic Monitoring | CloudWatch Synthetics Canary |
+| Alerting | CloudWatch Alarms, Amazon SNS |
+| Event Automation | Amazon EventBridge |
+| Auto-Remediation | AWS Lambda, AWS Systems Manager Run Command |
+| Installation Automation | Shell Scripts |
 | Operating System | Amazon Linux 2023 |
-| Security | Security Groups, IAM Roles |
+| Security | IAM Roles, Security Groups |
 | Version Control | Git and GitHub |
 
 ---
 
-## Server Setup
+##  Server Overview
 
-| Server | Purpose | Installed Components |
+| Server | Purpose | Components Installed |
 |---|---|---|
-| Monitoring Server | Central monitoring and dashboard server | Prometheus, Grafana, Loki |
-| App Server 1 | Application workload and monitored node | NGINX, Node Exporter, Promtail, CloudWatch Agent |
-| App Server 2 | Application workload and monitored node | NGINX, Node Exporter, Promtail, CloudWatch Agent |
+| Monitoring Server | Central observability server | Prometheus, Grafana, Loki, Node Exporter |
+| WebServer-01 | NGINX website and monitored server | NGINX, Node Exporter, Promtail, CloudWatch Agent, SSM Agent |
+| WebServer-02 | NGINX website and monitored server | NGINX, Node Exporter, Promtail, CloudWatch Agent, SSM Agent |
 
 ---
 
-## Monitoring and Logging Flow
+##  Project Structure
 
-### Metrics Flow
-
-```text
-App Server 1 Node Exporter
-        |
-        v
-Prometheus
-        |
-        v
-Grafana Dashboard
-
-
-App Server 2 Node Exporter
-        |
-        v
-Prometheus
-        |
-        v
-Grafana Dashboard
-```
-
-### Logs Flow
-
-```text
-/var/log/messages
-/var/log/secure
-/var/log/nginx/access.log
-/var/log/nginx/error.log
-        |
-        v
-Promtail
-        |
-        v
-Loki
-        |
-        v
-Grafana Explore / Log Dashboard
-```
-
-### CloudWatch Flow
-
-```text
-App Server
-   |
-   v
-CloudWatch Agent
-   |
-   v
-Amazon CloudWatch Metrics and Logs
-```
-
----
-
-## Repository Structure
-
-```text
-cloud-native-observability-platform/
-│
-├── prometheus/
-│   ├── prometheus.yml
-│   └── rules/
-│       └── node-alerts.yml
-│
-├── grafana/
-│   └── dashboards/
-│       ├── node-exporter-dashboard.json
-│       └── logs-dashboard.json
-│
-├── loki/
-│   └── loki-config.yml
-│
-├── promtail/
-│   ├── app-server-1-promtail.yml
-│   └── app-server-2-promtail.yml
-│
-├── cloudwatch-agent/
-│   └── cloudwatch-agent-config.json
-│
-├── scripts/
-│   ├── install-prometheus.sh
-│   ├── install-grafana.sh
-│   ├── install-loki.sh
-│   ├── install-node-exporter.sh
-│   ├── install-promtail.sh
-│   └── install-cloudwatch-agent.sh
-│
-├── Screenshots/
-│   ├── 1.Architecture-Diagram.png
-│   ├── 2.EC2-Instances.png
-│   ├── 3.Prometheus-Targets.png
-│   ├── 4.Grafana-Node-Exporter-Dashboard.png
-│   ├── 5.Loki-Logs-Grafana.png
-│   ├── 6.CloudWatch-Metrics.png
-│   └── 7.CloudWatch-Logs.png
-│
-├── README.md
-├── LICENSE
-└── .gitignore
-```
+    cloud-native-observability-platform/
+    │
+    ├── README.md
+    ├── LICENSE
+    │
+    ├── Screenshots/
+    │   ├── 1.Architecture-Diagram.png
+    │   ├── 2.EC2-Instances.png
+    │   ├── 3.Prometheus-Targets.png
+    │   ├── 4.Grafana-Node-Exporter-Dashboard.png
+    │   ├── 5.Loki-Logs-Grafana.png
+    │   ├── 6.CloudWatch-Agent-Metrics.png
+    │   ├── 7.CloudWatch-Log-Groups.png
+    │   ├── 8.SNS-Email-Alert.png
+    │   ├── 9.Synthetics-Canary-Failed.png
+    │   ├── 10.CloudWatch-Alarm-In-Alarm.png
+    │   ├── 11.EventBridge-Rule.png
+    │   ├── 12.Lambda-Execution-Logs.png
+    │   ├── 13.SSM-Run-Command-History.png
+    │   └── 14.NGINX-Auto-Restarted.png
+    │
+    ├── scripts/
+    │   ├── install-monitoring-stack.sh
+    │   ├── install-node-exporter-web.sh
+    │   ├── install-loki.sh
+    │   ├── install-promtail.sh
+    │   └── install-cloudwatch-agent.sh
+    │
+    ├── prometheus/
+    │   ├── prometheus.yml
+    │   └── rules/
+    │       └── node-alerts.yml
+    │
+    ├── grafana/
+    │   └── dashboards/
+    │       ├── node-exporter-dashboard.json
+    │       ├── loki-logs-dashboard.json
+    │       └── cloudwatch-dashboard.json
+    │
+    ├── loki/
+    │   └── loki-config.yml
+    │
+    ├── promtail/
+    │   ├── WebServer-01-promtail-config.yml
+    │   └── WebServer-02-promtail-config.yml
+    │
+    ├── cloudwatch-agent/
+    │   └── cloudwatch-agent-config.json
+    │
+    ├── lambda-auto-remediation/
+    │   └── lambda_function.py
+    │
+    ├── eventbridge/
+    │   └── alarm-state-change-pattern.json
+    │
+    ├── iam-policies/
+    │   ├── lambda-ssm-permissions.json
+    │   └── ec2-ssm-cloudwatch-role.md
+    │
+    └── website/
+        ├── index.html
+        ├── health.html
+        └── 404.html
 
 ---
 
-# Part 1: AWS Infrastructure Setup
+#  Part 1: AWS EC2 Infrastructure Setup
 
-## EC2 Instance Overview
+##  EC2 Instance Setup
 
-Three EC2 instances are used in this project.
+Three EC2 instances were created for this project:
 
-| Instance Name | Role | Recommended Type |
-|---|---|---|
-| `monitoring-server` | Prometheus, Grafana, Loki | `t3.small` |
-| `app-server-1` | Application server and monitored node | `t2.micro` |
-| `app-server-2` | Application server and monitored node | `t2.micro` |
-
-For this project, Amazon Linux 2023 is used on all instances.
-
----
-
-## Launch EC2 Instances
-
-Open AWS Console and go to:
-
-```text
-AWS Console → EC2 → Instances → Launch Instance
-```
+    Monitoring Server
+    WebServer-01
+    WebServer-02
 
 Recommended configuration:
 
-```text
-AMI: Amazon Linux 2023
-Instance Type:
-  Monitoring Server: t3.small
-  App Servers: t2.micro
-Key Pair: Existing or new key pair
-Storage:
-  Monitoring Server: 20 GB
-  App Servers: 8 GB
-Region: ap-south-1
-```
+| Configuration | Value |
+|---|---|
+| Region | `ap-south-1` |
+| AMI | Amazon Linux 2023 |
+| Monitoring Server | `t3.small` |
+| Web Servers | `t2.micro` |
+| Monitoring Server Storage | 20 GB |
+| Web Server Storage | 8 GB |
 
 ---
 
-## Security Group Design
+##  Security Group Design
 
 ### Monitoring Server Security Group
 
@@ -357,220 +301,170 @@ Region: ap-south-1
 | 22 | SSH | Your IP |
 | 3000 | Grafana | Your IP |
 | 9090 | Prometheus | Your IP |
-| 3100 | Loki | App Server Security Group |
-| 9100 | Node Exporter | App Server Security Group / Monitoring SG |
+| 3100 | Loki | Web Server Security Group |
+| 9100 | Node Exporter | Monitoring Server / Internal only |
 
-### Application Server Security Group
+### Web Server Security Group
 
 | Port | Service | Source |
 |---|---|---|
 | 22 | SSH | Your IP |
-| 80 | NGINX | Your IP / Internet |
+| 80 | NGINX Website | Internet / Your IP |
 | 9100 | Node Exporter | Monitoring Server Security Group |
-| 9080 | Promtail | Monitoring Server Security Group |
+| 9080 | Promtail | Internal only |
 
-> Note: In production, Prometheus, Loki, Grafana, Node Exporter, and Promtail ports should not be exposed publicly. Restrict access using private IPs, security groups, VPN, or bastion host.
-
----
-
-# Part 2: Application Server Setup
-
-This section should be completed on both Application Servers.
-
-## Update System Packages
-
-```bash
-sudo dnf update -y
-```
+> Monitoring ports should not be publicly exposed in production. Access should be restricted using private IPs, VPN, bastion host, or security-group-to-security-group rules.
 
 ---
 
-## Install NGINX
+#  Part 2: NGINX Website Deployment
 
-```bash
-sudo dnf install nginx -y
-sudo systemctl enable nginx
-sudo systemctl start nginx
-sudo systemctl status nginx
-```
+##  NGINX Overview
 
-Create a simple application page:
+NGINX was installed on both WebServer-01 and WebServer-02 to serve a simple project website.
 
-```bash
-echo "<h1>Application Server Observability Demo</h1>" | sudo tee /usr/share/nginx/html/index.html
-```
+The website was used for:
 
-Verify NGINX:
-
-```bash
-curl http://localhost
-```
-
-Generate sample access logs:
-
-```bash
-curl http://localhost
-curl http://localhost/test
-curl http://localhost/not-found
-```
+    Generating NGINX access logs
+    Generating NGINX error logs
+    Testing Loki and CloudWatch log collection
+    Providing a /health.html endpoint for CloudWatch Synthetics Canary
+    Testing auto-remediation when NGINX is stopped
 
 ---
 
-# Part 3: Install Node Exporter on App Servers
+##  Install NGINX
 
-Node Exporter is installed on both app servers to expose Linux system metrics such as CPU, memory, disk, filesystem, and network metrics.
+Run on both Web Servers:
 
-## Create Node Exporter User
-
-```bash
-sudo useradd --no-create-home --shell /sbin/nologin node_exporter
-```
-
----
-
-## Download and Install Node Exporter
-
-```bash
-cd /tmp
-
-NODE_EXPORTER_VERSION="1.8.2"
-
-wget https://github.com/prometheus/node_exporter/releases/download/v${NODE_EXPORTER_VERSION}/node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64.tar.gz
-
-tar -xvf node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64.tar.gz
-
-cd node_exporter-${NODE_EXPORTER_VERSION}.linux-amd64
-
-sudo cp node_exporter /usr/local/bin/
-
-sudo chown node_exporter:node_exporter /usr/local/bin/node_exporter
-```
+    sudo dnf update -y
+    sudo dnf install nginx -y
+    sudo systemctl enable nginx
+    sudo systemctl start nginx
+    sudo systemctl status nginx
 
 ---
 
-## Create Node Exporter Systemd Service
+##  Deploy Website Files
 
-```bash
-sudo vi /etc/systemd/system/node_exporter.service
-```
+Website files:
 
-Add the following configuration:
+    index.html
+    health.html
+    404.html
 
-```ini
-[Unit]
-Description=Node Exporter
-Wants=network-online.target
-After=network-online.target
+Copy files to the NGINX web root:
 
-[Service]
-User=node_exporter
-Group=node_exporter
-Type=simple
-ExecStart=/usr/local/bin/node_exporter
+    sudo cp index.html /usr/share/nginx/html/index.html
+    sudo cp health.html /usr/share/nginx/html/health.html
+    sudo cp 404.html /usr/share/nginx/html/404.html
+    sudo systemctl restart nginx
 
-Restart=always
+Health endpoint:
 
-[Install]
-WantedBy=multi-user.target
-```
-
-Start Node Exporter:
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable node_exporter
-sudo systemctl start node_exporter
-sudo systemctl status node_exporter
-```
-
-Verify metrics:
-
-```bash
-curl http://localhost:9100/metrics
-```
+    http://WEB_SERVER_PUBLIC_IP/health.html
 
 ---
 
-# Part 4: Monitoring Server Setup
+#  Part 3: Monitoring Stack Installation Using Shell Script
 
-## Update Monitoring Server
+##  Monitoring Stack Overview
 
-SSH into the monitoring server:
+A single shell script was used on the Monitoring Server to install:
 
-```bash
-ssh -i your-key.pem ec2-user@MONITORING_SERVER_PUBLIC_IP
-```
+    Prometheus
+    Grafana
+    Node Exporter
 
-Update packages:
+Script:
 
-```bash
-sudo dnf update -y
-sudo dnf install wget tar unzip git vim -y
-```
+    scripts/install-monitoring-stack.sh
 
----
+Run:
 
-# Part 5: Install Prometheus on Monitoring Server
-
-Prometheus is used to scrape metrics from Node Exporter running on both application servers.
-
-## Create Prometheus User and Directories
-
-```bash
-sudo useradd --no-create-home --shell /sbin/nologin prometheus
-
-sudo mkdir -p /etc/prometheus
-sudo mkdir -p /var/lib/prometheus
-sudo mkdir -p /etc/prometheus/rules
-
-sudo chown -R prometheus:prometheus /etc/prometheus /var/lib/prometheus
-```
+    chmod +x scripts/install-monitoring-stack.sh
+    ./scripts/install-monitoring-stack.sh
 
 ---
 
-## Download and Install Prometheus
+##  Services Started on Monitoring Server
 
-```bash
-cd /tmp
+    sudo systemctl enable prometheus
+    sudo systemctl start prometheus
 
-PROMETHEUS_VERSION="3.13.0"
+    sudo systemctl enable grafana-server
+    sudo systemctl start grafana-server
 
-wget https://github.com/prometheus/prometheus/releases/download/v${PROMETHEUS_VERSION}/prometheus-${PROMETHEUS_VERSION}.linux-amd64.tar.gz
+    sudo systemctl enable node_exporter
+    sudo systemctl start node_exporter
 
-tar -xvf prometheus-${PROMETHEUS_VERSION}.linux-amd64.tar.gz
+Verify:
 
-cd prometheus-${PROMETHEUS_VERSION}.linux-amd64
+    sudo systemctl status prometheus
+    sudo systemctl status grafana-server
+    sudo systemctl status node_exporter
 
-sudo cp prometheus /usr/local/bin/
-sudo cp promtool /usr/local/bin/
+Prometheus URL:
 
-sudo cp -r consoles /etc/prometheus
-sudo cp -r console_libraries /etc/prometheus
+    http://MONITORING_SERVER_PUBLIC_IP:9090
 
-sudo chown prometheus:prometheus /usr/local/bin/prometheus
-sudo chown prometheus:prometheus /usr/local/bin/promtool
-sudo chown -R prometheus:prometheus /etc/prometheus
-```
+Grafana URL:
+
+    http://MONITORING_SERVER_PUBLIC_IP:3000
 
 ---
 
-## Configure Prometheus
+#  Part 4: Node Exporter Installation on Web Servers
 
-Create Prometheus configuration file:
+##  Node Exporter Overview
 
-```bash
-sudo vi /etc/prometheus/prometheus.yml
-```
+Node Exporter was installed on both Web Servers using a separate shell script.
 
-Add the following configuration:
+Script:
+
+    scripts/install-node-exporter-web.sh
+
+Run on WebServer-01 and WebServer-02:
+
+    chmod +x scripts/install-node-exporter-web.sh
+    ./scripts/install-node-exporter-web.sh
+
+Node Exporter exposes metrics on:
+
+    http://WEB_SERVER_PRIVATE_IP:9100/metrics
+
+Metrics collected:
+
+    CPU usage
+    Memory usage
+    Disk usage
+    Filesystem usage
+    Network traffic
+    System load
+    Uptime
+
+Verify locally:
+
+    curl http://localhost:9100/metrics
+
+---
+
+#  Part 5: Prometheus Configuration
+
+##  Prometheus Overview
+
+Prometheus was configured on the Monitoring Server to scrape Node Exporter metrics from both Web Servers.
+
+Prometheus configuration file:
+
+    /etc/prometheus/prometheus.yml
+
+Example configuration:
 
 ```yaml
 global:
   scrape_interval: 15s
   evaluation_interval: 15s
-
-rule_files:
-  - "/etc/prometheus/rules/*.yml"
 
 scrape_configs:
   - job_name: "prometheus"
@@ -578,356 +472,114 @@ scrape_configs:
       - targets:
           - "localhost:9090"
 
-  - job_name: "app-servers-node-exporter"
+  - job_name: "webservers-node-exporter"
     static_configs:
       - targets:
-          - "APP_SERVER_1_PRIVATE_IP:9100"
-          - "APP_SERVER_2_PRIVATE_IP:9100"
+          - "WEBSERVER_01_PRIVATE_IP:9100"
+          - "WEBSERVER_02_PRIVATE_IP:9100"
 ```
 
-Replace:
+Restart Prometheus:
 
-```text
-APP_SERVER_1_PRIVATE_IP
-APP_SERVER_2_PRIVATE_IP
-```
-
-with the private IP addresses of your app servers.
-
----
-
-## Create Prometheus Systemd Service
-
-```bash
-sudo vi /etc/systemd/system/prometheus.service
-```
-
-Add:
-
-```ini
-[Unit]
-Description=Prometheus Monitoring System
-Wants=network-online.target
-After=network-online.target
-
-[Service]
-User=prometheus
-Group=prometheus
-Type=simple
-ExecStart=/usr/local/bin/prometheus \
-  --config.file=/etc/prometheus/prometheus.yml \
-  --storage.tsdb.path=/var/lib/prometheus \
-  --web.console.templates=/etc/prometheus/consoles \
-  --web.console.libraries=/etc/prometheus/console_libraries \
-  --web.listen-address=0.0.0.0:9090
-
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Start Prometheus:
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable prometheus
-sudo systemctl start prometheus
-sudo systemctl status prometheus
-```
-
-Open Prometheus in browser:
-
-```text
-http://MONITORING_SERVER_PUBLIC_IP:9090
-```
+    sudo systemctl restart prometheus
 
 Check targets:
 
-```text
-Prometheus → Status → Targets
-```
+    Prometheus → Status → Targets
 
 Expected result:
 
-```text
-app-server-1:9100    UP
-app-server-2:9100    UP
-```
+    UP
 
 ---
 
-# Part 6: Install Grafana on Monitoring Server
+#  Part 6: Grafana Dashboard Setup
 
-Grafana is used to visualize metrics from Prometheus and logs from Loki.
+##  Grafana Overview
 
-## Add Grafana Repository
+Grafana was used to visualize Prometheus metrics, Loki logs, and CloudWatch metrics.
 
-```bash
-sudo vi /etc/yum.repos.d/grafana.repo
-```
+Default Grafana URL:
 
-Add:
-
-```ini
-[grafana]
-name=grafana
-baseurl=https://rpm.grafana.com
-repo_gpgcheck=1
-enabled=1
-gpgcheck=1
-gpgkey=https://rpm.grafana.com/gpg.key
-sslverify=1
-sslcacert=/etc/pki/tls/certs/ca-bundle.crt
-```
-
----
-
-## Install Grafana
-
-```bash
-sudo dnf install grafana -y
-```
-
-Start Grafana:
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable grafana-server
-sudo systemctl start grafana-server
-sudo systemctl status grafana-server
-```
-
-Open Grafana:
-
-```text
-http://MONITORING_SERVER_PUBLIC_IP:3000
-```
+    http://MONITORING_SERVER_PUBLIC_IP:3000
 
 Default credentials:
 
-```text
-Username: admin
-Password: admin
-```
+    Username: admin
+    Password: admin
 
-Change the password after first login.
+Prometheus data source:
 
----
+    http://localhost:9090
 
-## Add Prometheus Data Source in Grafana
+Recommended dashboard:
 
-Go to:
+    Node Exporter Full Dashboard
+    Dashboard ID: 1860
 
-```text
-Grafana → Connections → Data Sources → Add Data Source → Prometheus
-```
+Dashboard metrics:
 
-Prometheus URL:
-
-```text
-http://localhost:9090
-```
-
-Click:
-
-```text
-Save & Test
-```
+    CPU utilization
+    Memory usage
+    Disk usage
+    Network traffic
+    Filesystem usage
+    System uptime
+    Load average
 
 ---
 
-## Import Node Exporter Dashboard
+#  Part 7: Loki Installation on Monitoring Server
 
-Go to:
+##  Loki Overview
 
-```text
-Grafana → Dashboards → New → Import
-```
+Loki was installed on the Monitoring Server using a dedicated shell script.
 
-Use dashboard ID:
+Script:
 
-```text
-1860
-```
+    scripts/install-loki.sh
 
-Select Prometheus as the data source and import the dashboard.
+Run:
 
-This dashboard displays:
+    chmod +x scripts/install-loki.sh
+    ./scripts/install-loki.sh
 
-```text
-CPU Usage
-Memory Usage
-Disk Usage
-Network Traffic
-Filesystem Usage
-System Load
-Uptime
-```
+Start and verify Loki:
 
----
+    sudo systemctl enable loki
+    sudo systemctl start loki
+    sudo systemctl status loki
 
-# Part 7: Install Loki on Monitoring Server
+Readiness check:
 
-Loki is used to store logs collected from the app servers.
-
-## Create Loki User and Directories
-
-```bash
-sudo useradd --no-create-home --shell /sbin/nologin loki
-
-sudo mkdir -p /etc/loki
-sudo mkdir -p /var/lib/loki
-
-sudo chown -R loki:loki /etc/loki /var/lib/loki
-```
-
----
-
-## Download and Install Loki
-
-```bash
-cd /tmp
-
-LOKI_VERSION="2.9.8"
-
-wget https://github.com/grafana/loki/releases/download/v${LOKI_VERSION}/loki-linux-amd64.zip
-
-unzip loki-linux-amd64.zip
-
-sudo mv loki-linux-amd64 /usr/local/bin/loki
-sudo chmod +x /usr/local/bin/loki
-sudo chown loki:loki /usr/local/bin/loki
-```
-
----
-
-## Configure Loki
-
-```bash
-sudo vi /etc/loki/loki-config.yml
-```
-
-Add:
-
-```yaml
-auth_enabled: false
-
-server:
-  http_listen_port: 3100
-  grpc_listen_port: 9096
-
-common:
-  path_prefix: /var/lib/loki
-  storage:
-    filesystem:
-      chunks_directory: /var/lib/loki/chunks
-      rules_directory: /var/lib/loki/rules
-  replication_factor: 1
-  ring:
-    instance_addr: 127.0.0.1
-    kvstore:
-      store: inmemory
-
-schema_config:
-  configs:
-    - from: 2024-01-01
-      store: tsdb
-      object_store: filesystem
-      schema: v13
-      index:
-        prefix: index_
-        period: 24h
-
-limits_config:
-  retention_period: 168h
-```
-
----
-
-## Create Loki Systemd Service
-
-```bash
-sudo vi /etc/systemd/system/loki.service
-```
-
-Add:
-
-```ini
-[Unit]
-Description=Loki Log Aggregation System
-After=network.target
-
-[Service]
-User=loki
-Group=loki
-ExecStart=/usr/local/bin/loki -config.file=/etc/loki/loki-config.yml
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Start Loki:
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable loki
-sudo systemctl start loki
-sudo systemctl status loki
-```
-
-Test Loki:
-
-```bash
-curl http://localhost:3100/ready
-```
+    curl http://localhost:3100/ready
 
 Expected output:
 
-```text
-ready
-```
+    ready
 
 ---
 
-# Part 8: Install Promtail on App Servers
+#  Part 8: Promtail Installation on Web Servers
 
-Promtail is installed on both application servers to collect logs and send them to Loki.
+##  Promtail Overview
 
-## Create Promtail Directories
+Promtail was installed on both Web Servers using a separate shell script.
 
-```bash
-sudo mkdir -p /etc/promtail
-sudo mkdir -p /var/lib/promtail
-```
+Script:
 
----
+    scripts/install-promtail.sh
 
-## Download and Install Promtail
+Run on WebServer-01 and WebServer-02:
 
-```bash
-cd /tmp
+    chmod +x scripts/install-promtail.sh
+    ./scripts/install-promtail.sh
 
-PROMTAIL_VERSION="2.9.8"
+Promtail configuration path:
 
-wget https://github.com/grafana/loki/releases/download/v${PROMTAIL_VERSION}/promtail-linux-amd64.zip
+    /etc/promtail/promtail-config.yml
 
-unzip promtail-linux-amd64.zip
-
-sudo mv promtail-linux-amd64 /usr/local/bin/promtail
-sudo chmod +x /usr/local/bin/promtail
-```
-
----
-
-## Configure Promtail on App Server 1
-
-```bash
-sudo vi /etc/promtail/promtail-config.yml
-```
-
-Add:
+Example configuration for WebServer-01:
 
 ```yaml
 server:
@@ -941,217 +593,103 @@ clients:
   - url: http://MONITORING_SERVER_PRIVATE_IP:3100/loki/api/v1/push
 
 scrape_configs:
-  - job_name: system-logs
+  - job_name: system
     static_configs:
       - targets:
           - localhost
         labels:
           job: system
-          host: app-server-1
+          host: WebServer-01
           __path__: /var/log/messages
 
-  - job_name: secure-logs
+  - job_name: secure
     static_configs:
       - targets:
           - localhost
         labels:
           job: secure
-          host: app-server-1
+          host: WebServer-01
           __path__: /var/log/secure
 
-  - job_name: nginx-access-logs
+  - job_name: nginx
     static_configs:
       - targets:
           - localhost
         labels:
-          job: nginx-access
-          host: app-server-1
-          __path__: /var/log/nginx/access.log
-
-  - job_name: nginx-error-logs
-    static_configs:
-      - targets:
-          - localhost
-        labels:
-          job: nginx-error
-          host: app-server-1
-          __path__: /var/log/nginx/error.log
+          job: nginx
+          host: WebServer-01
+          __path__: /var/log/nginx/*.log
 ```
 
-Replace:
+For WebServer-02, the host label was changed to:
 
-```text
-MONITORING_SERVER_PRIVATE_IP
-```
+    host: WebServer-02
 
-with the private IP address of your monitoring server.
+Restart Promtail:
+
+    sudo systemctl restart promtail
+    sudo systemctl status promtail
+
+Check logs:
+
+    sudo journalctl -u promtail -f
 
 ---
 
-## Configure Promtail on App Server 2
+#  Part 9: Loki Data Source and Log Queries in Grafana
 
-Use the same configuration, but change the host label:
+##  Add Loki Data Source
 
-```yaml
-host: app-server-2
-```
+In Grafana:
 
-This helps identify which server generated the log.
-
----
-
-## Create Promtail Systemd Service
-
-```bash
-sudo vi /etc/systemd/system/promtail.service
-```
-
-Add:
-
-```ini
-[Unit]
-Description=Promtail Log Collector
-After=network.target
-
-[Service]
-User=root
-ExecStart=/usr/local/bin/promtail -config.file=/etc/promtail/promtail-config.yml
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Start Promtail:
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable promtail
-sudo systemctl start promtail
-sudo systemctl status promtail
-```
-
----
-
-# Part 9: Add Loki Data Source in Grafana
-
-Open Grafana:
-
-```text
-http://MONITORING_SERVER_PUBLIC_IP:3000
-```
-
-Go to:
-
-```text
-Grafana → Connections → Data Sources → Add Data Source → Loki
-```
+    Connections → Data sources → Add data source → Loki
 
 Loki URL:
 
-```text
-http://localhost:3100
+    http://localhost:3100
+
+Test LogQL queries:
+
+```logql
+{host="WebServer-01"}
 ```
 
-Click:
-
-```text
-Save & Test
+```logql
+{host="WebServer-02"}
 ```
 
----
-
-## Test Logs in Grafana Explore
-
-Go to:
-
-```text
-Grafana → Explore
+```logql
+{job="nginx"}
 ```
-
-Run LogQL queries:
 
 ```logql
 {job="system"}
 ```
 
-```logql
-{job="secure"}
-```
+Generate test logs:
 
-```logql
-{job="nginx-access"}
-```
-
-```logql
-{job="nginx-error"}
-```
-
-Generate a test log from App Server 1:
-
-```bash
-logger "Test log from app-server-1"
-```
-
-Search in Grafana:
-
-```logql
-{host="app-server-1"}
-```
-
-Generate NGINX logs:
-
-```bash
-curl http://localhost
-curl http://localhost/not-found
-```
-
-Search:
-
-```logql
-{job="nginx-access"}
-```
+    logger "Test log from WebServer-01"
+    curl http://localhost
+    curl http://localhost/not-found
 
 ---
 
-# Part 10: Install CloudWatch Agent on App Servers
+#  Part 10: CloudWatch Agent Setup
 
-CloudWatch Agent is used to send system-level metrics and logs to Amazon CloudWatch.
+##  CloudWatch Agent Overview
 
-## Attach IAM Role to App Servers
+CloudWatch Agent was installed on both Web Servers to send custom metrics and logs to Amazon CloudWatch.
 
-Create or attach an IAM role with the following managed policies:
+IAM policies attached to Web Server role:
 
-```text
-CloudWatchAgentServerPolicy
-AmazonSSMManagedInstanceCore
-```
+    CloudWatchAgentServerPolicy
+    AmazonSSMManagedInstanceCore
 
-Attach this IAM role to both app servers:
+CloudWatch Agent config path:
 
-```text
-EC2 → Instance → Actions → Security → Modify IAM Role
-```
+    /opt/aws/amazon-cloudwatch-agent/bin/config.json
 
----
-
-## Install CloudWatch Agent
-
-Run this on both app servers:
-
-```bash
-sudo dnf install amazon-cloudwatch-agent -y
-```
-
----
-
-## Create CloudWatch Agent Configuration
-
-```bash
-sudo vi /opt/aws/amazon-cloudwatch-agent/bin/config.json
-```
-
-Add:
+Example configuration:
 
 ```json
 {
@@ -1208,502 +746,646 @@ Add:
 }
 ```
 
----
+Start CloudWatch Agent:
 
-## Start CloudWatch Agent
+    sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
+    -a fetch-config \
+    -m ec2 \
+    -s \
+    -c file:/opt/aws/amazon-cloudwatch-agent/bin/config.json
 
-```bash
-sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
--a fetch-config \
--m ec2 \
--s \
--c file:/opt/aws/amazon-cloudwatch-agent/bin/config.json
-```
+Check status:
 
-Check CloudWatch Agent status:
+    sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a status
 
-```bash
-sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a status
-```
+Verify:
 
-Verify in AWS Console:
-
-```text
-CloudWatch → Metrics → All metrics → ObservabilityProject/EC2
-CloudWatch → Logs → Log groups
-```
+    CloudWatch → Metrics → ObservabilityProject/EC2
+    CloudWatch → Logs → Log groups
 
 ---
 
-# Part 11: Add CloudWatch Data Source in Grafana
+#  Part 11: SNS Alert Notification
 
-To visualize AWS CloudWatch metrics in Grafana, attach a role to the Monitoring Server with CloudWatch read permissions.
+##  SNS Overview
 
-Recommended policy:
+Amazon SNS was configured to send email notifications when a CloudWatch Alarm enters the `ALARM` state.
 
-```text
-CloudWatchReadOnlyAccess
-```
+SNS topic:
 
-Then in Grafana:
+    observability-alerts
 
-```text
-Grafana → Connections → Data Sources → Add Data Source → CloudWatch
-```
+Alert flow:
+
+    CloudWatch Alarm
+          |
+          v
+    SNS Topic
+          |
+          v
+    Email Notification
+          |
+          v
+    DevOps Engineer / Admin
+
+SNS was used for:
+
+    NGINX health check failure alert
+    Canary failure alert
+    Infrastructure alarm notifications
+
+---
+
+#  Part 12: CloudWatch Synthetics Canary
+
+##  Canary Overview
+
+CloudWatch Synthetics Canary was configured as a heartbeat monitor for the NGINX website endpoint.
+
+Canary type:
+
+    Heartbeat monitoring
+
+Canary endpoint:
+
+    http://WEB_SERVER_PUBLIC_IP/health.html
+
+Schedule used for demo:
+
+    Every 1 minute
+
+Purpose:
+
+    Continuously monitor the NGINX website endpoint
+    Detect when NGINX is stopped or unavailable
+    Trigger CloudWatch Alarm when SuccessPercent drops below 100
+    Start the auto-remediation workflow
+
+When NGINX was stopped manually, the Canary detected the endpoint failure and the run status changed to:
+
+    Failed
+
+---
+
+#  Part 13: CloudWatch Alarm for NGINX Health Check Failure
+
+##  Alarm Overview
+
+A CloudWatch Alarm was created from the Canary metric.
+
+Metric:
+
+    CloudWatchSynthetics → CanaryName → SuccessPercent
+
+Correct alarm condition:
+
+    SuccessPercent < 100
 
 Configuration:
 
-```text
-Authentication Provider: AWS SDK Default
-Default Region: ap-south-1
+    Statistic: Average
+    Period: 1 minute
+    Threshold type: Static
+    Condition: Lower than 100
+    Evaluation periods: 1
+    Datapoints to alarm: 1 out of 1
+    Treat missing data: Breaching
+
+Alarm name:
+
+    WebServer-01-Nginx-HealthCheck-Failed
+
+Alarm description:
+
+    This alarm monitors the NGINX website endpoint using CloudWatch Synthetics Canary heartbeat checks. It triggers when the website endpoint becomes unavailable or the Canary success percentage drops below 100%. When the alarm enters ALARM state, it sends an SNS notification and triggers an EventBridge rule that invokes a Lambda function to restart the NGINX service on the configured EC2 WebServer instances using AWS Systems Manager.
+
+Important fix during troubleshooting:
+
+    The alarm condition must be SuccessPercent < 100.
+    SuccessPercent > 100 is incorrect because SuccessPercent cannot exceed 100.
+
+---
+
+#  Part 14: EventBridge Rule for Auto-Remediation
+
+##  EventBridge Overview
+
+EventBridge was configured to listen for CloudWatch Alarm state change events.
+
+Rule name:
+
+    nginx-healthcheck-auto-remediation
+
+Rule type:
+
+    Rule with an event pattern
+
+Event bus:
+
+    default
+
+Event pattern:
+
+```json
+{
+  "source": ["aws.cloudwatch"],
+  "detail-type": ["CloudWatch Alarm State Change"],
+  "detail": {
+    "state": {
+      "value": ["ALARM"]
+    },
+    "alarmName": [
+      "WebServer-01-Nginx-HealthCheck-Failed"
+    ]
+  }
+}
 ```
 
-Click:
+Target:
 
-```text
-Save & Test
-```
+    Lambda function: restart-unhealthy-service
 
-Now Grafana can visualize:
+Note:
 
-```text
-EC2 CPUUtilization
-CloudWatch Agent memory metrics
-CloudWatch Agent disk metrics
-CloudWatch Logs
+    When using the custom JSON pattern editor, the AWS console may show the source category as "Other events".
+    This is normal as long as the JSON includes "source": ["aws.cloudwatch"].
+
+EventBridge triggers only when the alarm state changes:
+
+    OK → ALARM
+
+If the alarm is already in ALARM state, reset it and trigger again:
+
+    ALARM → OK → ALARM
+
+---
+
+#  Part 15: Lambda Auto-Remediation Function
+
+##  Lambda Overview
+
+A Lambda function was created to restart the NGINX service on the Web Servers using AWS Systems Manager Run Command.
+
+Lambda function:
+
+    restart-unhealthy-service
+
+Runtime:
+
+    Python 3.x
+
+Environment variables:
+
+    INSTANCE_IDS = i-xxxxxxxxxxxxxxxxx,i-yyyyyyyyyyyyyyyyy
+    SERVICE_NAME = nginx
+
+There should be no space after the comma in `INSTANCE_IDS`.
+
+Example:
+
+    INSTANCE_IDS = i-0123456789abcdef0,i-0abcdef1234567890
+    SERVICE_NAME = nginx
+
+Lambda code:
+
+```python
+import boto3
+import os
+
+ssm = boto3.client("ssm")
+
+def lambda_handler(event, context):
+    instance_ids = os.environ["INSTANCE_IDS"].split(",")
+    service_name = os.environ.get("SERVICE_NAME", "nginx")
+
+    commands = [
+        f"sudo systemctl restart {service_name}",
+        f"sudo systemctl is-active {service_name}",
+        f"sudo systemctl status {service_name} --no-pager"
+    ]
+
+    response = ssm.send_command(
+        InstanceIds=instance_ids,
+        DocumentName="AWS-RunShellScript",
+        Parameters={
+            "commands": commands
+        },
+        Comment=f"Auto-remediation: restart {service_name}"
+    )
+
+    command_id = response["Command"]["CommandId"]
+
+    print("Event received:", event)
+    print("SSM Command ID:", command_id)
+    print("Target instances:", instance_ids)
+    print("Service:", service_name)
+
+    return {
+        "statusCode": 200,
+        "message": f"SSM restart command sent for {service_name}",
+        "command_id": command_id,
+        "instance_ids": instance_ids
+    }
 ```
 
 ---
 
-# Part 12: Prometheus Alert Rules
+#  Part 16: IAM Permissions
 
-Create alert rule file:
+##  Lambda Execution Role
 
-```bash
-sudo vi /etc/prometheus/rules/node-alerts.yml
+Lambda requires CloudWatch Logs permission:
+
+    AWSLambdaBasicExecutionRole
+
+Lambda also requires SSM permissions to send commands:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowSSMRunCommandForLearningProject",
+      "Effect": "Allow",
+      "Action": [
+        "ssm:SendCommand",
+        "ssm:GetCommandInvocation",
+        "ssm:ListCommandInvocations",
+        "ssm:ListCommands"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
 ```
 
-Add:
-
-```yaml
-groups:
-  - name: node-alerts
-    rules:
-      - alert: InstanceDown
-        expr: up == 0
-        for: 1m
-        labels:
-          severity: critical
-        annotations:
-          summary: "Instance is down"
-          description: "Target {{ $labels.instance }} has been down for more than 1 minute."
-
-      - alert: HighCPUUsage
-        expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
-        for: 2m
-        labels:
-          severity: warning
-        annotations:
-          summary: "High CPU usage detected"
-          description: "CPU usage is above 80% on {{ $labels.instance }}."
-
-      - alert: LowDiskSpace
-        expr: (node_filesystem_avail_bytes{mountpoint="/",fstype!="tmpfs"} / node_filesystem_size_bytes{mountpoint="/",fstype!="tmpfs"}) * 100 < 20
-        for: 2m
-        labels:
-          severity: warning
-        annotations:
-          summary: "Low disk space detected"
-          description: "Disk space is below 20% on {{ $labels.instance }}."
-
-      - alert: HighMemoryUsage
-        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 80
-        for: 2m
-        labels:
-          severity: warning
-        annotations:
-          summary: "High memory usage detected"
-          description: "Memory usage is above 80% on {{ $labels.instance }}."
-```
-
-Check Prometheus configuration:
-
-```bash
-promtool check config /etc/prometheus/prometheus.yml
-```
-
-Restart Prometheus:
-
-```bash
-sudo systemctl restart prometheus
-```
-
-Check alerts:
-
-```text
-http://MONITORING_SERVER_PUBLIC_IP:9090/alerts
-```
+For production, permissions should be restricted to specific EC2 instance ARNs and SSM documents.
 
 ---
 
-# Part 13: Grafana Dashboard Setup
+##  EC2 Web Server IAM Role
 
-## Dashboard 1: Node Exporter Full Dashboard
+Both Web Servers require:
 
-Use Grafana dashboard ID:
+    AmazonSSMManagedInstanceCore
+    CloudWatchAgentServerPolicy
 
-```text
-1860
-```
+These policies allow:
 
-This dashboard shows:
+    SSM Run Command execution
+    Managed instance visibility in Systems Manager
+    CloudWatch Agent metric and log publishing
 
-```text
-CPU Usage
-Memory Usage
-Disk Usage
-Network Traffic
-System Load
-Filesystem Usage
-Uptime
-```
+Verify managed instances:
+
+    Systems Manager → Fleet Manager
 
 ---
 
-## Dashboard 2: Logs Dashboard
+#  Part 17: Auto-Remediation Testing
 
-Create panels using Loki queries:
+##  Test Scenario
 
-```logql
-{job="system"}
-```
+NGINX was manually stopped on the Web Server:
 
-```logql
-{job="secure"}
-```
+    sudo systemctl stop nginx
 
-```logql
-{job="nginx-access"}
-```
+Verify service failure:
 
-```logql
-{job="nginx-error"}
-```
+    sudo systemctl status nginx
+
+Verify website failure:
+
+    curl http://localhost/health.html
 
 ---
 
-## Dashboard 3: CloudWatch Agent Dashboard
+##  Detection and Remediation Flow
 
-Create panels for:
-
-```text
-Memory Used Percent
-Disk Used Percent
-CloudWatch Log Groups
-EC2 CPU Utilization
-```
-
----
-
-# Part 14: Validation and Testing
-
-## Check Running Services
-
-On Monitoring Server:
-
-```bash
-sudo systemctl status prometheus
-sudo systemctl status grafana-server
-sudo systemctl status loki
-```
-
-On App Servers:
-
-```bash
-sudo systemctl status nginx
-sudo systemctl status node_exporter
-sudo systemctl status promtail
-sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a status
-```
+    NGINX stopped manually
+          |
+          v
+    CloudWatch Synthetics Canary failed
+          |
+          v
+    CloudWatch Alarm entered ALARM state
+          |
+          v
+    SNS email alert was sent
+          |
+          v
+    EventBridge triggered Lambda
+          |
+          v
+    Lambda sent SSM Run Command
+          |
+          v
+    NGINX restarted automatically
+          |
+          v
+    Website became reachable again
 
 ---
 
-## Verify Prometheus Targets
+##  Verification
 
-Open:
+Check Lambda logs:
 
-```text
-http://MONITORING_SERVER_PUBLIC_IP:9090/targets
-```
+    CloudWatch Logs → /aws/lambda/restart-unhealthy-service
 
-Expected result:
+Check SSM Run Command:
 
-```text
-prometheus                  UP
-app-server-1:9100           UP
-app-server-2:9100           UP
-```
+    Systems Manager → Run Command → Command history
 
----
+Check NGINX:
 
-## Verify Logs in Loki
+    sudo systemctl status nginx
 
-Run on App Server 1:
+Expected output:
 
-```bash
-logger "Application test log from app-server-1"
-```
+    active (running)
 
-Run on App Server 2:
+Check website:
 
-```bash
-logger "Application test log from app-server-2"
-```
-
-Check in Grafana Explore:
-
-```logql
-{host="app-server-1"}
-```
-
-```logql
-{host="app-server-2"}
-```
+    curl http://localhost/health.html
 
 ---
 
-## Verify NGINX Logs
+#  Part 18: Useful Commands
 
-Generate traffic:
+##  Prometheus
 
-```bash
-curl http://localhost
-curl http://localhost/not-found
-```
+    sudo systemctl status prometheus
 
-Check logs:
+##  Grafana
 
-```bash
-sudo tail -f /var/log/nginx/access.log
-sudo tail -f /var/log/nginx/error.log
-```
+    sudo systemctl status grafana-server
 
-Check in Grafana:
+##  Loki
 
-```logql
-{job="nginx-access"}
-```
+    sudo systemctl status loki
+    curl http://localhost:3100/ready
 
-```logql
-{job="nginx-error"}
-```
+##  Node Exporter
 
----
+    sudo systemctl status node_exporter
+    curl http://localhost:9100/metrics
 
-## Verify CloudWatch Logs
+##  Promtail
 
-Open AWS Console:
+    sudo systemctl status promtail
+    sudo journalctl -u promtail -f
 
-```text
-CloudWatch → Logs → Log groups
-```
+##  NGINX
 
-Check the following log groups:
+    sudo systemctl status nginx
+    curl http://localhost
+    curl http://localhost/health.html
 
-```text
-/observability/ec2/messages
-/observability/ec2/secure
-/observability/nginx/access
-/observability/nginx/error
-```
+##  CloudWatch Agent
+
+    sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a status
+
+##  SSM Agent
+
+    sudo systemctl status amazon-ssm-agent
 
 ---
 
-# Screenshots to Add
+#  Part 19: Validation Checklist
 
-Add the following screenshots in the `Screenshots/` folder:
-
-| Screenshot | Description |
+| Validation | Expected Result |
 |---|---|
-| `1.Architecture-Diagram.png` | Complete observability architecture |
-| `2.EC2-Instances.png` | Monitoring and app servers |
-| `3.Security-Groups.png` | Security group rules |
-| `4.Prometheus-Targets.png` | Targets showing UP |
-| `5.Grafana-Node-Exporter-Dashboard.png` | Infrastructure dashboard |
-| `6.Loki-Logs-Grafana.png` | Logs visible in Grafana |
-| `7.CloudWatch-Agent-Metrics.png` | CloudWatch custom metrics |
-| `8.CloudWatch-Log-Groups.png` | CloudWatch log groups |
-| `9.Nginx-Logs.png` | Application access/error logs |
-| `10.Alert-Rules.png` | Prometheus alert rules |
+| Prometheus service | Active |
+| Grafana service | Active |
+| Loki service | Active |
+| Loki readiness | `/ready` returns `ready` |
+| Node Exporter | Metrics visible on port `9100` |
+| Prometheus targets | Web Servers show `UP` |
+| Grafana dashboard | CPU, memory, disk, and network metrics visible |
+| Promtail service | Active |
+| Loki logs | WebServer logs visible in Grafana |
+| CloudWatch Agent | Memory and disk metrics visible |
+| CloudWatch log groups | NGINX and system logs visible |
+| SNS | Email alert received |
+| Synthetics Canary | Detects NGINX endpoint failure |
+| CloudWatch Alarm | Moves to `ALARM` |
+| EventBridge | Invokes Lambda |
+| Lambda | Sends SSM command |
+| SSM Run Command | Restarts NGINX |
+| NGINX | Returns to `active (running)` |
 
 ---
 
-# Troubleshooting
+#  Part 20: Troubleshooting
 
-## Prometheus Target Down
+##  Prometheus Target Down
 
 Check Node Exporter:
 
-```bash
-sudo systemctl status node_exporter
-```
-
-Check security group:
-
-```text
-Monitoring Server must be allowed to access App Servers on port 9100
-```
+    sudo systemctl status node_exporter
 
 Test from Monitoring Server:
 
-```bash
-curl http://APP_SERVER_PRIVATE_IP:9100/metrics
-```
+    curl http://WEBSERVER_PRIVATE_IP:9100/metrics
+
+Check Security Group:
+
+    Monitoring Server must access Web Servers on port 9100.
 
 ---
 
-## Grafana Not Opening
+##  Grafana Not Opening
 
-Check Grafana service:
+Check Grafana:
 
-```bash
-sudo systemctl status grafana-server
-```
+    sudo systemctl status grafana-server
 
-Check security group:
+Check Security Group:
 
-```text
-Port 3000 must be open from your IP
-```
+    Port 3000 must be allowed from your IP.
 
 ---
 
-## Loki Not Ready
+##  Loki Not Ready
 
-Check Loki service:
+Check Loki:
 
-```bash
-sudo systemctl status loki
-```
-
-Check readiness:
-
-```bash
-curl http://localhost:3100/ready
-```
+    sudo systemctl status loki
+    curl http://localhost:3100/ready
 
 ---
 
-## Promtail Not Sending Logs
-
-Check Promtail service:
-
-```bash
-sudo systemctl status promtail
-```
+##  Promtail Not Sending Logs
 
 Check Promtail logs:
 
-```bash
-sudo journalctl -u promtail -f
-```
+    sudo journalctl -u promtail -f
 
-Check Loki connectivity from App Server:
+Test Loki connectivity from Web Server:
 
-```bash
-curl http://MONITORING_SERVER_PRIVATE_IP:3100/ready
-```
+    curl http://MONITORING_SERVER_PRIVATE_IP:3100/ready
 
 ---
 
-## CloudWatch Agent Not Sending Logs
+##  Canary Failed but Alarm Still OK
 
-Check IAM role:
+Check alarm condition:
 
-```text
-CloudWatchAgentServerPolicy must be attached
-```
+    SuccessPercent < 100
 
-Check agent status:
+Incorrect condition:
 
-```bash
-sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a status
-```
+    SuccessPercent > 100
 
-Restart agent:
+Correct settings:
 
-```bash
-sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
--a fetch-config \
--m ec2 \
--s \
--c file:/opt/aws/amazon-cloudwatch-agent/bin/config.json
-```
+    Period: 1 minute
+    Evaluation periods: 1
+    Datapoints to alarm: 1 out of 1
+    Treat missing data: Breaching
 
 ---
 
-# Key Learnings
+##  Alarm in ALARM but Lambda Not Triggered
 
-Through this project, I learned how to:
+Check EventBridge rule:
 
-```text
-Set up centralized monitoring using Prometheus
-Collect Linux system metrics using Node Exporter
-Create Grafana dashboards for real-time visibility
-Collect and centralize logs using Promtail and Loki
-Monitor EC2 memory, disk, and logs using CloudWatch Agent
-Use CloudWatch for AWS-native metrics and log monitoring
-Troubleshoot infrastructure and application issues using metrics and logs
-Design a production-style monitoring architecture on AWS
-```
+    Rule enabled
+    Event bus: default
+    Target: restart-unhealthy-service Lambda
+    Alarm name matches exactly
+
+EventBridge triggers only on state change:
+
+    OK → ALARM
 
 ---
 
-# Project Outcome
+##  Lambda Invoked but NGINX Not Restarted
 
-This project successfully demonstrates a centralized observability platform where two application servers are monitored from a dedicated monitoring server.
+Check SSM Run Command history:
 
-Final implementation includes:
+    Systems Manager → Run Command → Command history
 
-```text
-Prometheus metrics collection
-Node Exporter system metrics
-Grafana dashboards
-Loki log aggregation
-Promtail log collection
-CloudWatch Agent metrics and logs
-NGINX application log monitoring
-System and authentication log collection
-```
+Check Web Server SSM Agent:
 
----
+    sudo systemctl status amazon-ssm-agent
 
-# Resume Highlight
+Check EC2 IAM role:
 
-```text
-Built a centralized AWS observability platform using Prometheus, Grafana, Loki, Promtail, Node Exporter, and CloudWatch Agent to monitor two EC2 application servers with real-time metrics, centralized logs, and dashboard-based troubleshooting.
-```
+    AmazonSSMManagedInstanceCore
+
+Check Lambda IAM role:
+
+    ssm:SendCommand
 
 ---
 
-# Future Improvements
+#  Cost Considerations
 
-Possible future enhancements:
+This project uses low-cost AWS services and small EC2 instances for learning.
 
-```text
-Add Alertmanager for Prometheus alerts
-Configure SNS email alerts
-Add CloudWatch alarms
-Add Lambda-based auto-remediation
-Add Kubernetes monitoring using kube-prometheus-stack
-Add AWS X-Ray for distributed tracing
-Add Terraform automation for infrastructure provisioning
-```
+Cost-aware choices:
+
+    t2.micro instances for Web Servers
+    One small Monitoring Server
+    Basic CloudWatch metrics
+    Minimal Canary schedule for demo
+    No load balancer used in this practical
+    No Kubernetes cluster used
+    No serverless application monitoring used
+
+Stop or terminate resources after practice to avoid unwanted charges.
 
 ---
 
-# Conclusion
+#  Learning Outcomes
 
-This project demonstrates a practical monitoring and observability setup used in real-world DevOps and Cloud environments. It combines open-source monitoring tools with AWS-native monitoring services to provide complete visibility into application servers, infrastructure metrics, and logs.
+This project demonstrates hands-on experience with:
 
-The project is useful for understanding how DevOps engineers monitor production systems, debug issues, analyze logs, and maintain infrastructure reliability.
+    Prometheus monitoring
+    Grafana dashboards
+    Node Exporter metrics
+    Loki log aggregation
+    Promtail log shipping
+    CloudWatch Agent metrics and logs
+    CloudWatch log groups
+    CloudWatch Synthetics Canary
+    CloudWatch Alarms
+    SNS email notifications
+    EventBridge event-driven automation
+    Lambda auto-remediation
+    AWS Systems Manager Run Command
+    IAM permission troubleshooting
+    EC2 service recovery automation
+    Shell-script-based installation automation
+
+---
+
+#  Project Outcome
+
+The final implementation successfully created a centralized AWS observability platform for two EC2-based NGINX web servers.
+
+Final working flow:
+
+    NGINX stopped manually
+          |
+          v
+    CloudWatch Synthetics Canary detected failure
+          |
+          v
+    CloudWatch Alarm entered ALARM state
+          |
+          v
+    SNS email notification sent
+          |
+          v
+    EventBridge triggered Lambda
+          |
+          v
+    Lambda used SSM Run Command
+          |
+          v
+    NGINX restarted automatically
+          |
+          v
+    Website became available again
+
+---
+
+#  Resume Highlight
+
+    Built a centralized AWS observability platform using Prometheus, Grafana, Loki, Promtail, Node Exporter, and CloudWatch Agent to monitor two EC2 NGINX Web Servers with real-time metrics, centralized logs, CloudWatch Synthetics heartbeat checks, SNS alerts, and Lambda-based auto-remediation through AWS Systems Manager.
+
+---
+
+#  Resume Bullet Points
+
+    - Implemented a centralized monitoring and observability platform on AWS using Prometheus, Grafana, Loki, Promtail, Node Exporter, and CloudWatch Agent to monitor two EC2-based NGINX web servers.
+    - Automated installation of Prometheus, Grafana, Node Exporter, Loki, Promtail, and CloudWatch Agent using modular shell scripts for monitoring and web server setup.
+    - Configured CloudWatch Synthetics Canary to monitor the NGINX website heartbeat endpoint and trigger CloudWatch Alarms with SNS email notifications during service failures.
+    - Built an event-driven auto-remediation workflow using EventBridge, Lambda, and AWS Systems Manager Run Command to automatically restart NGINX when the health check failed.
+
+---
+
+#  Future Improvements
+
+    Add Alertmanager for Prometheus-native alerts
+    Add Slack or Microsoft Teams notifications
+    Add Application Load Balancer endpoint monitoring
+    Add HTTPS using ACM and Route 53
+    Add Terraform automation for complete infrastructure provisioning
+    Add Kubernetes cluster monitoring using kube-prometheus-stack
+    Add serverless application monitoring with API Gateway, Lambda, and DynamoDB
+    Add distributed tracing using AWS X-Ray or OpenTelemetry
+
+---
+
+#  Conclusion
+
+This project demonstrates a practical, production-style monitoring and observability setup for AWS EC2 workloads.
+
+It combines open-source observability tools with AWS-native monitoring and automation services to provide infrastructure visibility, centralized log collection, synthetic website monitoring, alerting, and automated recovery.
+
+The project goes beyond basic monitoring by implementing a complete auto-remediation workflow where a failed NGINX website is detected by CloudWatch Synthetics Canary and automatically recovered using EventBridge, Lambda, and AWS Systems Manager.
