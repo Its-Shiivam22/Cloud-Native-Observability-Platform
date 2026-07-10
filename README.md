@@ -1,14 +1,12 @@
 #  Cloud-Native Monitoring and Observability Platform on AWS
 
 ![AWS](https://img.shields.io/badge/AWS-Cloud-orange)
-![EC2](https://img.shields.io/badge/Amazon-EC2-yellow)
 ![Prometheus](https://img.shields.io/badge/Monitoring-Prometheus-red)
 ![Grafana](https://img.shields.io/badge/Dashboard-Grafana-orange)
+![Node Exporter](https://img.shields.io/badge/Metrics-Node%20Exporter-lightgrey)
 ![Loki](https://img.shields.io/badge/Logs-Loki-blue)
 ![Promtail](https://img.shields.io/badge/Log%20Collector-Promtail-green)
-![Node Exporter](https://img.shields.io/badge/Metrics-Node%20Exporter-lightgrey)
 ![CloudWatch](https://img.shields.io/badge/AWS-CloudWatch-purple)
-![SNS](https://img.shields.io/badge/Alerts-SNS-pink)
 ![EventBridge](https://img.shields.io/badge/EventBridge-Automation-blue)
 ![Lambda](https://img.shields.io/badge/Lambda-Auto--Remediation-yellow)
 ![SSM](https://img.shields.io/badge/AWS-Systems%20Manager-brightgreen)
@@ -35,38 +33,41 @@ The monitoring setup collects:
 
 The project also implements an automated recovery workflow. A **CloudWatch Synthetics Canary** continuously monitors the NGINX website endpoint. When NGINX is stopped or the website becomes unavailable, the Canary fails, a CloudWatch Alarm enters the `ALARM` state, SNS sends an email notification, EventBridge triggers a Lambda function, and Lambda uses AWS Systems Manager Run Command to restart NGINX automatically.
 
-This practical project focuses only on EC2-based web server monitoring and auto-remediation. Kubernetes cluster monitoring and serverless application monitoring were not implemented in this practical.
-
+This practical project focuses only on EC2-based web server monitoring and auto-remediation.
 ---
 
-##  Architecture Flow
-
+##  Architectural Flow
+```Metrics:```
+```
     User / Admin
          |
          v
-    Grafana Dashboard
-         |
+                          Grafana Dashboard
+                                 |
          |---------------- Metrics Flow ----------------|
-         |                                              |
-         v                                              v
+     
     Prometheus <--------- Node Exporter <--------- WebServer-01
-         ^                                      WebServer-02
-         |
-         |
-    Grafana Visualizes Metrics
-
-
+         |                                          WebServer-02
+         |                                               |                                               v
+         v                                               V
+    Grafana Visualizes Metrics <----------------- CloudWatch Agent              
+       in Dashboards 
+```
+```Logs:```
+```
     NGINX Logs / System Logs / Secure Logs
-         |
-         v
+             |
+             v
     Promtail on Web Servers
-         |
-         v
+             |
+             v
     Loki on Monitoring Server
-         |
-         v
-    Grafana Explore / Logs Dashboard
-
+             |
+             v
+    Grafana Explore -------> Logs Dashboard
+```
+```Auto-Remediation:```
+```
 
     NGINX Website URL Endpoint
          |
@@ -90,10 +91,10 @@ This practical project focuses only on EC2-based web server monitoring and auto-
          |
          v
     Restart NGINX on Web Servers
-
+```
 ---
 
-##  Architecture Diagram using Mermaid
+##  Architecture Diagram using Mermaid -Part 1:
 
 ```mermaid
 flowchart LR
@@ -106,15 +107,15 @@ flowchart LR
     %% =========================
     %% APPLICATION SERVERS
     %% =========================
-    subgraph Apps["Application Servers"]
-        App1["App Server 1<br/>NGINX Application"]
-        App2["App Server 2<br/>NGINX Application"]
+    subgraph Apps["Web Servers"]
+         WebServer-1["Web Server 1<br/>NGINX Application"]
+         WebServer-2["Web Server 2<br/>NGINX Application"]
     end
 
     %% =========================
     %% AGENTS
     %% =========================
-    subgraph Agents["Agents Running on App Servers"]
+    subgraph Agents["Agents Running on Web Servers"]
         NodeExporter["Node Exporter<br/>Port 9100"]
         Promtail["Promtail<br/>Log Collector"]
         CWAgent["CloudWatch Agent<br/>Metrics + Logs"]
@@ -137,24 +138,24 @@ flowchart LR
     %% =========================
     %% METRICS FLOW
     %% =========================
-    App1 --> NodeExporter
-    App2 --> NodeExporter
+    WebServer-1 --> NodeExporter
+    WebServer-2 --> NodeExporter
     NodeExporter -->|"Scrapes system metrics"| Prometheus
     Prometheus -->|"Prometheus Data Source"| Grafana
 
     %% =========================
     %% LOGS FLOW
     %% =========================
-    App1 --> Promtail
-    App2 --> Promtail
+     WebServer-1 --> Promtail
+     WebServer-2 --> Promtail
     Promtail -->|"Pushes system + NGINX logs"| Loki
     Loki -->|"Loki Data Source"| Grafana
 
     %% =========================
     %% CLOUDWATCH FLOW
     %% =========================
-    App1 --> CWAgent
-    App2 --> CWAgent
+     WebServer-1 --> CWAgent
+     WebServer-2 --> CWAgent
     CWAgent -->|"Sends metrics and logs"| CloudWatch
     CloudWatch -->|"CloudWatch Data Source"| Grafana
 
@@ -162,6 +163,104 @@ flowchart LR
     %% DASHBOARD ACCESS
     %% =========================
     Admin -->|"View metrics, logs, dashboards"| Grafana
+```
+
+## Architecture Diagram using Mermaid -Part 2:
+
+```mermaid
+flowchart LR
+
+    %% =========================
+    %% APPLICATION ENDPOINTS
+    %% =========================
+    subgraph AppTier["Application Tier"]
+        direction TB
+         WebServer-1["Web Server 1<br/>NGINX Application<br/>Health Endpoint"]
+         WebServer-2["Web Server 2<br/>NGINX Application<br/>Health Endpoint"]
+    end
+
+    %% =========================
+    %% SYNTHETIC MONITORING
+    %% =========================
+    subgraph MonitorTier["Synthetic Monitoring"]
+        direction TB
+        Canary["CloudWatch Synthetics Canary<br/>Heartbeat Monitoring<br/>Checks both application URLs"]
+    end
+
+    %% =========================
+    %% DETECTION AND ALERTING
+    %% =========================
+    subgraph AlertTier["Detection and Alerting"]
+        direction TB
+        Alarm["CloudWatch Alarm<br/>Metric: SuccessPercent<br/>Condition: less than 100"]
+        SNS["Amazon SNS<br/>Email Alert Notification"]
+    end
+
+    %% =========================
+    %% EVENT-DRIVEN AUTOMATION
+    %% =========================
+    subgraph AutomationTier["Event-Driven Automation"]
+        direction TB
+        EventBridge["Amazon EventBridge<br/>CloudWatch Alarm State Change Rule"]
+        Lambda["AWS Lambda<br/>restart-unhealthy-service"]
+        SSM["AWS Systems Manager<br/>Run Command"]
+    end
+
+    %% =========================
+    %% RECOVERY
+    %% =========================
+    subgraph RecoveryTier["Service Recovery"]
+        direction TB
+        Restart["Restart NGINX Service<br/>on both App Servers"]
+        Healthy["Website Reachable Again<br/>Service Healthy"]
+    end
+
+    %% =========================
+    %% HEARTBEAT MONITORING FLOW
+    %% =========================
+     WebServer-1 -->|"Heartbeat URL check"| Canary
+     WebServer-2 -->|"Heartbeat URL check"| Canary
+
+    %% =========================
+    %% FAILURE DETECTION FLOW
+    %% =========================
+    Canary -->|"Failed canary run<br/>endpoint unavailable"| Alarm
+    Alarm -->|"Send notification"| SNS
+
+    %% =========================
+    %% AUTO-REMEDIATION FLOW
+    %% =========================
+    Alarm -->|"ALARM state change"| EventBridge
+    EventBridge -->|"Invoke function"| Lambda
+    Lambda -->|"Send SSM command"| SSM
+    SSM -->|"sudo systemctl restart nginx"| Restart
+    Restart -->|"Health check passes"| Healthy
+
+    %% =========================
+    %% RECOVERY VALIDATION LOOP
+    %% =========================
+    Healthy -.->|"Canary succeeds again"| Canary
+
+    %% =========================
+    %% STYLING
+    %% =========================
+    classDef app fill:#EAF2FF,stroke:#2563EB,stroke-width:2px,color:#111827;
+    classDef canary fill:#E9FBFA,stroke:#0891B2,stroke-width:2px,color:#111827;
+    classDef alarm fill:#FFF8DB,stroke:#D97706,stroke-width:2px,color:#111827;
+    classDef sns fill:#FFF0F6,stroke:#DB2777,stroke-width:2px,color:#111827;
+    classDef event fill:#F2EEFF,stroke:#7C3AED,stroke-width:2px,color:#111827;
+    classDef lambda fill:#FFF4E2,stroke:#EA580C,stroke-width:2px,color:#111827;
+    classDef ssm fill:#EAF8EF,stroke:#16A34A,stroke-width:2px,color:#111827;
+    classDef recovery fill:#ECFDF5,stroke:#15803D,stroke-width:2px,color:#111827;
+
+    class App1,App2 app;
+    class Canary canary;
+    class Alarm alarm;
+    class SNS sns;
+    class EventBridge event;
+    class Lambda lambda;
+    class SSM ssm;
+    class Restart,Healthy recovery;
 ```
 
 ---
