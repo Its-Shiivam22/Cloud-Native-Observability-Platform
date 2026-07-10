@@ -97,64 +97,72 @@ This practical project focuses only on EC2-based web server monitoring and auto-
 
 ```mermaid
 flowchart LR
+flowchart LR
 
-    Admin[DevOps Engineer / Admin]
+    %% =========================
+    %% USERS
+    %% =========================
+    Admin["DevOps Engineer / Admin"]
 
-    subgraph WebServers[EC2 Web Servers]
-        Web1[WebServer-01<br/>NGINX Website]
-        Web2[WebServer-02<br/>NGINX Website]
+    %% =========================
+    %% APPLICATION SERVERS
+    %% =========================
+    subgraph Apps["Application Servers"]
+        App1["App Server 1<br/>NGINX Application"]
+        App2["App Server 2<br/>NGINX Application"]
     end
 
-    subgraph WebAgents[Agents on Web Servers]
-        NodeExporter[Node Exporter<br/>Metrics]
-        Promtail[Promtail<br/>Log Collector]
-        CWAgent[CloudWatch Agent<br/>Metrics + Logs]
-        SSMAgent[SSM Agent<br/>Run Command]
+    %% =========================
+    %% AGENTS
+    %% =========================
+    subgraph Agents["Agents Running on App Servers"]
+        NodeExporter["Node Exporter<br/>Port 9100"]
+        Promtail["Promtail<br/>Log Collector"]
+        CWAgent["CloudWatch Agent<br/>Metrics + Logs"]
     end
 
-    subgraph MonitoringServer[Monitoring Server]
-        Prometheus[Prometheus<br/>Metrics Collection]
-        Grafana[Grafana<br/>Dashboards]
-        Loki[Loki<br/>Log Aggregation]
+    %% =========================
+    %% MONITORING SERVER
+    %% =========================
+    subgraph Monitoring["Monitoring Server"]
+        Prometheus["Prometheus<br/>Metrics Database"]
+        Loki["Loki<br/>Log Aggregation"]
+        Grafana["Grafana<br/>Dashboards"]
     end
 
-    subgraph AWSNative[AWS Native Monitoring and Automation]
-        CloudWatch[Amazon CloudWatch<br/>Metrics + Logs]
-        Canary[CloudWatch Synthetics Canary<br/>Heartbeat Check]
-        Alarm[CloudWatch Alarm<br/>SuccessPercent < 100]
-        SNS[SNS<br/>Email Alert]
-        EventBridge[EventBridge Rule<br/>Alarm State Change]
-        Lambda[Lambda<br/>restart-unhealthy-service]
-        SSM[AWS Systems Manager<br/>Run Command]
-    end
+    %% =========================
+    %% AWS NATIVE MONITORING
+    %% =========================
+    CloudWatch["Amazon CloudWatch<br/>Metrics + Log Groups"]
 
-    Admin --> Grafana
+    %% =========================
+    %% METRICS FLOW
+    %% =========================
+    App1 --> NodeExporter
+    App2 --> NodeExporter
+    NodeExporter -->|"Scrapes system metrics"| Prometheus
+    Prometheus -->|"Prometheus Data Source"| Grafana
 
-    Web1 --> NodeExporter
-    Web2 --> NodeExporter
-    NodeExporter --> Prometheus
-    Prometheus --> Grafana
+    %% =========================
+    %% LOGS FLOW
+    %% =========================
+    App1 --> Promtail
+    App2 --> Promtail
+    Promtail -->|"Pushes system + NGINX logs"| Loki
+    Loki -->|"Loki Data Source"| Grafana
 
-    Web1 --> Promtail
-    Web2 --> Promtail
-    Promtail --> Loki
-    Loki --> Grafana
+    %% =========================
+    %% CLOUDWATCH FLOW
+    %% =========================
+    App1 --> CWAgent
+    App2 --> CWAgent
+    CWAgent -->|"Sends metrics and logs"| CloudWatch
+    CloudWatch -->|"CloudWatch Data Source"| Grafana
 
-    Web1 --> CWAgent
-    Web2 --> CWAgent
-    CWAgent --> CloudWatch
-    CloudWatch --> Grafana
-
-    Web1 --> Canary
-    Web2 --> Canary
-    Canary --> Alarm
-    Alarm --> SNS
-    Alarm --> EventBridge
-    EventBridge --> Lambda
-    Lambda --> SSM
-    SSM --> SSMAgent
-    SSMAgent --> Web1
-    SSMAgent --> Web2
+    %% =========================
+    %% DASHBOARD ACCESS
+    %% =========================
+    Admin -->|"View metrics, logs, dashboards"| Grafana
 ```
 
 ---
