@@ -97,7 +97,6 @@ This practical project focuses only on EC2-based web server monitoring and auto-
 
 ```mermaid
 flowchart LR
-flowchart LR
 
     %% =========================
     %% USERS
