@@ -48,8 +48,8 @@ This practical project focuses only on EC2-based web server monitoring and auto-
      
     Prometheus <--------- Node Exporter <--------- WebServer-01
          |                                          WebServer-02
-         |                                               |                                               v
-         v                                               V
+         |                                               |          
+         v                                               v
     Grafana Visualizes Metrics <----------------- CloudWatch Agent              
        in Dashboards 
 ```
@@ -70,26 +70,26 @@ This practical project focuses only on EC2-based web server monitoring and auto-
 ```
 
     NGINX Website URL Endpoint
-         |
-         v
+           |
+           v
     CloudWatch Synthetics Canary
-         |
-         v
+           |
+           v
     CloudWatch Alarm
-         |
-         v
+           |
+           v
     SNS Email Notification
-         |
-         v
+           |
+           v
     EventBridge Rule
-         |
-         v
+           |
+           v
     Lambda Function
-         |
-         v
+           |
+           v
     AWS Systems Manager Run Command
-         |
-         v
+           |
+           v
     Restart NGINX on Web Servers
 ```
 ---
@@ -163,6 +163,27 @@ flowchart LR
     %% DASHBOARD ACCESS
     %% =========================
     Admin -->|"View metrics, logs, dashboards"| Grafana
+
+    %% =========================
+    %% STYLING
+    %% =========================
+    classDef web fill:#EAF2FF,stroke:#2563EB,stroke-width:2px,color:#111827;
+    classDef agents fill:#E9FBFA,stroke:#0891B2,stroke-width:2px,color:#111827;
+    classDef cw fill:#FFF8DB,stroke:#D97706,stroke-width:2px,color:#111827;
+    classDef monitoring fill:#FFF0F6,stroke:#DB2777,stroke-width:2px,color:#111827;
+    classDef grafana fill:#F2EEFF,stroke:#7C3AED,stroke-width:2px,color:#111827;
+    classDef lambda fill:#FFF4E2,stroke:#EA580C,stroke-width:2px,color:#111827;
+    classDef dev fill:#EAF8EF,stroke:#16A34A,stroke-width:2px,color:#111827;
+    classDef recovery fill:#ECFDF5,stroke:#15803D,stroke-width:2px,color:#111827;
+
+    class WebServer-1,WebServer-2 web;
+    class NodeExporter,Promtail agents;
+    class CWAgent,CloudWatch cw;
+    class Prometheus,Loki monitoring;
+    class Grafana grafana;
+    class Lambda lambda;
+    class Admin dev;
+    class Restart,Healthy recovery;
 ```
 
 ## Architecture Diagram using Mermaid -Part 2:
@@ -244,7 +265,7 @@ flowchart LR
     %% =========================
     %% STYLING
     %% =========================
-    classDef app fill:#EAF2FF,stroke:#2563EB,stroke-width:2px,color:#111827;
+    classDef web fill:#EAF2FF,stroke:#2563EB,stroke-width:2px,color:#111827;
     classDef canary fill:#E9FBFA,stroke:#0891B2,stroke-width:2px,color:#111827;
     classDef alarm fill:#FFF8DB,stroke:#D97706,stroke-width:2px,color:#111827;
     classDef sns fill:#FFF0F6,stroke:#DB2777,stroke-width:2px,color:#111827;
@@ -253,7 +274,7 @@ flowchart LR
     classDef ssm fill:#EAF8EF,stroke:#16A34A,stroke-width:2px,color:#111827;
     classDef recovery fill:#ECFDF5,stroke:#15803D,stroke-width:2px,color:#111827;
 
-    class App1,App2 app;
+    class WebServer-1,WebServer-2 web;
     class Canary canary;
     class Alarm alarm;
     class SNS sns;
