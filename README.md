@@ -412,9 +412,9 @@ Recommended configuration:
 |---|---|
 | Region | `ap-south-1` |
 | AMI | Amazon Linux 2023 |
-| Monitoring Server | `t3.small` |
-| Web Servers | `t2.micro` |
-| Monitoring Server Storage | 20 GB |
+| Monitoring Server | `c7i-flex.large` |
+| Web Servers | `t3.micro` |
+| Monitoring Server Storage | 15 GB |
 | Web Server Storage | 8 GB |
 
 ---
@@ -423,24 +423,11 @@ Recommended configuration:
 
 ### Monitoring Server Security Group
 
-| Port | Service | Source |
-|---|---|---|
-| 22 | SSH | Your IP |
-| 3000 | Grafana | Your IP |
-| 9090 | Prometheus | Your IP |
-| 3100 | Loki | Web Server Security Group |
-| 9100 | Node Exporter | Monitoring Server / Internal only |
+
 
 ### Web Server Security Group
 
-| Port | Service | Source |
-|---|---|---|
-| 22 | SSH | Your IP |
-| 80 | NGINX Website | Internet / Your IP |
-| 9100 | Node Exporter | Monitoring Server Security Group |
-| 9080 | Promtail | Internal only |
 
-> Monitoring ports should not be publicly exposed in production. Access should be restricted using private IPs, VPN, bastion host, or security-group-to-security-group rules.
 
 ---
 
@@ -475,10 +462,9 @@ Run on both Web Servers:
 ##  Deploy Website Files
 
 Website files:
-
-    index.html
-    health.html
-    404.html
+```index.html```
+```health.html```
+```404.html```
 
 Copy files to the NGINX web root:
 
@@ -487,9 +473,7 @@ Copy files to the NGINX web root:
     sudo cp 404.html /usr/share/nginx/html/404.html
     sudo systemctl restart nginx
 
-Health endpoint:
-
-    http://WEB_SERVER_PUBLIC_IP/health.html
+Health endpoint: ```http://WEB_SERVER_PUBLIC_IP/health.html```
 
 ---
 
