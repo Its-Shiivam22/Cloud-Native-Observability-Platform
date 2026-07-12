@@ -529,10 +529,6 @@ Run:
   <img src="./Screenshots/9.PromoGraph-1.png" width="1000">
 </p>
 
-Prometheus URL: ```http://MONITORING_SERVER_PUBLIC_IP:9090```
-
-Grafana URL: ```http://MONITORING_SERVER_PUBLIC_IP:3000```
-
 <p align="center">
   <img src="./Screenshots/10.PromoGraph-2.png" width="1000">
 </p>
@@ -540,6 +536,9 @@ Grafana URL: ```http://MONITORING_SERVER_PUBLIC_IP:3000```
 <p align="center">
   <img src="./Screenshots/11.PromoGraph-3.png" width="1000">
 </p>
+
+Prometheus URL: ```http://MONITORING_SERVER_PUBLIC_IP:9090``` <br>
+Grafana URL: ```http://MONITORING_SERVER_PUBLIC_IP:3000```
 
 ---
 
