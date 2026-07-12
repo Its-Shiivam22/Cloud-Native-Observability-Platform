@@ -487,9 +487,10 @@ Website files:
 
 Copy files to the NGINX web root:
 
-    sudo cp index.html /usr/share/nginx/html/index.html
-    sudo cp health.html /usr/share/nginx/html/health.html
-    sudo cp 404.html /usr/share/nginx/html/404.html
+    cd /usr/share/nginx/html/index.html
+    sudo vi index.html 
+    sudo vi health.html 
+    sudo vi 404.html 
     sudo systemctl restart nginx
 
 <p align="center">
@@ -512,39 +513,33 @@ A single shell script was used on the Monitoring Server to install:
 
 Script:
 
-    scripts/install-monitoring-stack.sh
+    vi install-Promograph.sh
+
+
+<p align="center">
+  <img src="./Screenshots/8.Promograph-Script.png" width="1000">
+</p>
 
 Run:
 
-    chmod +x scripts/install-monitoring-stack.sh
-    ./scripts/install-monitoring-stack.sh
+    chmod +x install-Promograph.sh
+    ./install-Promograph.sh
 
----
+<p align="center">
+  <img src="./Screenshots/9.PromoGraph-1.png" width="1000">
+</p>
 
-##  Services Started on Monitoring Server
+Prometheus URL: ```http://MONITORING_SERVER_PUBLIC_IP:9090```
 
-    sudo systemctl enable prometheus
-    sudo systemctl start prometheus
+Grafana URL: ```http://MONITORING_SERVER_PUBLIC_IP:3000```
 
-    sudo systemctl enable grafana-server
-    sudo systemctl start grafana-server
+<p align="center">
+  <img src="./Screenshots/10.PromoGraph-2.png" width="1000">
+</p>
 
-    sudo systemctl enable node_exporter
-    sudo systemctl start node_exporter
-
-Verify:
-
-    sudo systemctl status prometheus
-    sudo systemctl status grafana-server
-    sudo systemctl status node_exporter
-
-Prometheus URL:
-
-    http://MONITORING_SERVER_PUBLIC_IP:9090
-
-Grafana URL:
-
-    http://MONITORING_SERVER_PUBLIC_IP:3000
+<p align="center">
+  <img src="./Screenshots/11.PromoGraph-3.png" width="1000">
+</p>
 
 ---
 
@@ -556,16 +551,29 @@ Node Exporter was installed on both Web Servers using a separate shell script.
 
 Script:
 
-    scripts/install-node-exporter-web.sh
+    vi NodeExp.sh
+
+<p align="center">
+  <img src="./Screenshots/12.NodeExp-Script.png" width="1000">
+</p>
+
 
 Run on WebServer-01 and WebServer-02:
 
     chmod +x scripts/install-node-exporter-web.sh
     ./scripts/install-node-exporter-web.sh
 
-Node Exporter exposes metrics on:
+<p align="center">
+  <img src="./Screenshots/13.NodeExp-1.png" width="1000">
+</p>
 
-    http://WEB_SERVER_PRIVATE_IP:9100/metrics
+
+<p align="center">
+  <img src="./Screenshots/14.NodeExp-2.png" width="1000">
+</p>
+
+Node Exporter exposes metrics on:
+  ```http://WEB_SERVER_PRIVATE_IP:9100/metrics```
 
 Metrics collected:
 
@@ -577,9 +585,7 @@ Metrics collected:
     System load
     Uptime
 
-Verify locally:
-
-    curl http://localhost:9100/metrics
+Verify locally: ```curl http://localhost:9100/metrics```
 
 ---
 
