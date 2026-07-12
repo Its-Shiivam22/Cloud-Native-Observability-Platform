@@ -287,10 +287,17 @@ flowchart LR
 ---
 
 ##  Architecture Diagram
+```Monitoring & Obesrvability Architecture:```
+<p align="center">
+  <img src="./Screenshots/1.Architecture-1.png" width="1000">
+</p>
 
-![Architecture Diagram](Screenshots/1.Architecture-Diagram.png)
+```Remediation Architecture:```
+<p align="center">
+  <img src="./Screenshots/2.Architecture-2.png" width="1000">
+</p>
 
-    Screenshots/1.Architecture-Diagram.png
+    Screenshots/Architecture-Diagram.png
 
 ---
 
@@ -406,6 +413,10 @@ Three EC2 instances were created for this project:
     WebServer-01
     WebServer-02
 
+<p align="center">
+  <img src="./Screenshots/3.Servers.png" width="1000">
+</p>
+
 Recommended configuration:
 
 | Configuration | Value |
@@ -421,13 +432,17 @@ Recommended configuration:
 
 ##  Security Group Design
 
-### Monitoring Server Security Group
+```Monitoring Server Security Group:```
 
+<p align="center">
+  <img src="./Screenshots/4.Monitoring-Server-SG.png" width="1000">
+</p>
 
+```Web Server Security Group:```
 
-### Web Server Security Group
-
-
+<p align="center">
+  <img src="./Screenshots/5.WebServer-SG.png" width="1000">
+</p>
 
 ---
 
@@ -457,6 +472,10 @@ Run on both Web Servers:
     sudo systemctl start nginx
     sudo systemctl status nginx
 
+<p align="center">
+  <img src="./Screenshots/6.nginx Installation.png" width="1000">
+</p>
+
 ---
 
 ##  Deploy Website Files
@@ -472,6 +491,10 @@ Copy files to the NGINX web root:
     sudo cp health.html /usr/share/nginx/html/health.html
     sudo cp 404.html /usr/share/nginx/html/404.html
     sudo systemctl restart nginx
+
+<p align="center">
+  <img src="./Screenshots/7.Nginx-setup.png" width="1000">
+</p>
 
 Health endpoint: ```http://WEB_SERVER_PUBLIC_IP/health.html```
 
